@@ -3,38 +3,90 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Bson;
+using MongoDB.Driver;
+using RestSharp;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Bson;
 
 namespace hero_backend.Controllers
 {
-    [Route("dota/[controller]")]
+    [Route("api/[controller]")]
     [ApiController]
     public class HeroController : ControllerBase
     {
-        public string GenerateKey(string heroName)
+        private readonly MongoClient client;
+        private readonly IMongoDatabase database;
+
+        private ActionResult<string> GetDocument(string collectionName, BsonDocument filter)
         {
-            return $"dota/hero/{heroName}";
+            var collection = database.GetCollection<BsonDocument>(collectionName);
+            var obj = collection.Find(filter).FirstOrDefault();
+            if (obj == null)
+            {
+                return NotFound();
+            }
+
+            // remove mongoDB uuid
+            obj.Remove("_id");
+            return Ok(obj.ToJson());
         }
 
-        // GET dota/values
-        //[HttpGet]
-        //public ActionResult<IEnumerable<string>> Get()
-        //{
-        //    return new string[] { "value1", "value2" };
-        //}
-
-        // GET dota/hero/sandking
-        [HttpGet("{heroName}")]
-        public ActionResult<string> Get(string heroName)
+        private ActionResult<string> GetMultipleDocuments(string collectionName, BsonDocument filter)
         {
+            var collection = database.GetCollection<BsonDocument>(collectionName);
+            var objs = collection.Find(filter);
+            if (objs.CountDocuments() == 0)
+            {
+                return NotFound();
+            }
+            
+            var iterator = objs.ToEnumerable();
 
-            return "string heroName";
+            // broken but not sure why
+            foreach (var json in iterator)
+            {
+                json.Remove("_id");
+            }
+
+            return Ok(iterator.ToJson());
         }
 
-        // GET dota/hero/sandking/safelane
-        [HttpGet("{heroName}/{lane}")]
-        public ActionResult<string> Get(string heroName, string laneName)
+
+        public HeroController()
         {
-            return "string heroName, string laneName";
+             client = new MongoClient("mongodb://127.0.0.1:27017/");
+             database = client.GetDatabase("herodb");
+        }
+
+        [HttpGet("heroinfo/{heroName}")]
+        public ActionResult<string> GetHero(string heroName)
+        {
+            return GetDocument("heroes", new BsonDocument("localized_name", heroName));
+        }
+
+        [HttpGet("herostats/{heroId}")]
+        public ActionResult<string> GetHeroStats(int heroId)
+        {
+            return GetDocument("heroesStats", new BsonDocument("id", heroId));
+        }
+
+        [HttpGet("itemtiming/{heroId}")]
+        public ActionResult<string> GetItemTiming(int heroId)
+        {
+            return GetMultipleDocuments("itemTimings", new BsonDocument("hero_id", heroId));
+        }
+
+        [HttpGet("laneroles/{heroId}")]
+        public ActionResult<string> GetLaneRoles(int heroId)
+        {
+            return GetMultipleDocuments("laneRoles", new BsonDocument("hero_id", heroId));
+        }
+
+        [HttpGet("durations/{heroId}")]
+        public ActionResult<string> GetHeroDurations(int heroId)
+        {
+            return GetMultipleDocuments("durations", new BsonDocument("hero_id", heroId));
         }
 
         // POST api/hero

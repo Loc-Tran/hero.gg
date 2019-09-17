@@ -8,8 +8,6 @@ using System.Linq;
 
 namespace LoadDotaData
 {
-
-
     class Program
     {
         static readonly int NUMBER_OF_DOTA_HEROES = 115; // make sure to update this when new heroes are added
@@ -63,7 +61,7 @@ namespace LoadDotaData
             {
                 var content = RestAPICall("https://api.opendota.com", prefix + i.ToString() + suffix, Method.GET);
 
-                if(content.Contains("error"))
+                if (content.Contains("error"))
                 {
                     // opendota rate limits 50 requests per minute, just wait for a minute then try again
                     System.Threading.Thread.Sleep(60000);
