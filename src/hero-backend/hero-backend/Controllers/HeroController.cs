@@ -1,14 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using RestSharp;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Bson;
-
+using System.Collections.Generic;
 namespace hero_backend.Controllers
 {
     [Route("api/[controller]")]
@@ -43,13 +37,15 @@ namespace hero_backend.Controllers
             
             var iterator = objs.ToEnumerable();
 
-            // broken but not sure why
+            // this is hacky but no idea to figure it out
+            var retval = new List<BsonDocument>();
             foreach (var json in iterator)
             {
                 json.Remove("_id");
+                retval.Add(json);
             }
 
-            return Ok(iterator.ToJson());
+            return Ok(retval.ToJson());
         }
 
 
@@ -63,6 +59,18 @@ namespace hero_backend.Controllers
         public ActionResult<string> GetHero(string heroName)
         {
             return GetDocument("heroes", new BsonDocument("localized_name", heroName));
+        }
+
+        [HttpGet("heroinfo/")]
+        public ActionResult<string> GetAllHeroes()
+        {
+            return GetMultipleDocuments("heroes", new BsonDocument());
+        }
+
+        [HttpGet("herostats/")]
+        public ActionResult<string> GetAllHeroStats()
+        {
+            return GetMultipleDocuments("heroesStats", new BsonDocument());
         }
 
         [HttpGet("herostats/{heroId}")]
