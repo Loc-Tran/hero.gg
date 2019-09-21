@@ -75,7 +75,7 @@ export class HeroTable extends Component {
   renderTableData() {
       let totalGames = this.calculateTotalGames();
       return this.state.heroes.map((hero, index) => {
-         const { id, localized_name, roles } = hero //destructuring
+         const { hero_id, localized_name, roles } = hero //destructuring
          let herostats;
          
          if (this.state.heroStats && this.state.heroStats.length > 0) {
@@ -84,7 +84,8 @@ export class HeroTable extends Component {
          
          let benchMark;
          if (this.state.benchMarks && this.state.benchMarks.length > 0) {
-           benchMark = this.state.benchMarks[index]["result"];
+           benchMark = this.state.benchMarks[index].result;
+           console.log(benchMark)
          }
          
          let img = "";
@@ -107,21 +108,21 @@ export class HeroTable extends Component {
          let killsPerMin;
          let csPerMin;
          let healingPerMin;
-         
+
          if (benchMark) {
-           dmgPerMin = benchMark.hero_damage_per_min[4];
-           towerDmg = benchMark.tower_damage[4];
-           killsPerMin = benchMark.kills_per_min[4];
-           goldPerMin = benchMark.gold_per_min[4];
-           expPerMin = benchMark.xp_per_min[4];
-           csPerMin = benchMark.last_hits_per_min[4];
-           healingPerMin = benchMark.hero_healing_per_min[4];
+           dmgPerMin = benchMark.hero_damage_per_min[4].value;
+           towerDmg = benchMark.tower_damage[4].value;
+           killsPerMin = benchMark.kills_per_min[4].value;
+           goldPerMin = benchMark.gold_per_min[4].value;
+           expPerMin = benchMark.xp_per_min[4].value;
+           csPerMin = benchMark.last_hits_per_min[4].value;
+           healingPerMin = benchMark.hero_healing_per_min[4].value;
          }
          
          // tableKeys: ["Rank", "Hero", "Roles", "Win Rate", "Play Percent", "Kills/Min", "Dmg/Min", "Tower Dmg", "Gold/Min", "EXP/Min", "CS/Min", "Healing/Min"]
          return (
-            <tr key={id}>
-               <td>{id}</td>
+            <tr key={index}>
+               <td>{index + 1}</td>
                <td><img alt={localized_name} src={img} />{localized_name}</td>
                <td>{roles}</td>
                <td>{winrate}%</td>

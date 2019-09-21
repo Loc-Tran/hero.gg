@@ -10,7 +10,7 @@ namespace LoadDotaData
 {
     class Program
     {
-        static readonly int NUMBER_OF_DOTA_HEROES = 129; // make sure to update this when new heroes are added
+        static readonly int NUMBER_OF_DOTA_HEROES = 117; // make sure to update this when new heroes are added
 
         public static bool CollectionExists(IMongoDatabase mongoDatabase, string collectionName)
         {
