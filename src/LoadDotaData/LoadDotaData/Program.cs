@@ -10,7 +10,7 @@ namespace LoadDotaData
 {
     class Program
     {
-        static readonly int NUMBER_OF_DOTA_HEROES = 115; // make sure to update this when new heroes are added
+        static readonly int NUMBER_OF_DOTA_HEROES = 129; // make sure to update this when new heroes are added
 
         public static bool CollectionExists(IMongoDatabase mongoDatabase, string collectionName)
         {
@@ -21,13 +21,16 @@ namespace LoadDotaData
             return collections.Any();
         }
 
-        public static string RestAPICall(string url, string restPath, Method restMethod)
+        public static string RestAPICall(string url, string restPath, Method restMethod, string paramName = "", string paramValue = "")
         {
             var client = new RestClient(url);
             // client.Authenticator = new HttpBasicAuthenticator(username, password);
 
             var request = new RestRequest(restPath, restMethod);
-            //request.AddParameter("name", "value"); // adds to POST or URL querystring based on Method
+            if(!String.IsNullOrEmpty(paramName))
+            {
+                request.AddParameter(paramName, paramValue); // adds to POST or URL querystring based on Method
+            }
             //request.AddUrlSegment("id", "123"); // replaces matching token in request.Resource
             // easily add HTTP Headers
             //request.AddHeader("header", "value");
@@ -37,7 +40,31 @@ namespace LoadDotaData
             // execute the request
             IRestResponse response = client.Execute(request);
             return response.Content; // raw content as string
+
         }
+
+        public static void CreateBenchMarksCollection(IMongoDatabase database)
+        {
+            database.CreateCollection("benchmarks");
+            var collection = database.GetCollection<BsonDocument>("benchmarks");
+            for (int i = 1; i <= NUMBER_OF_DOTA_HEROES;)
+            {
+                var content = RestAPICall("https://api.opendota.com", "/api/benchmarks", Method.GET, "hero_id", i.ToString());
+
+                if (content.Contains("error"))
+                {
+                    // opendota rate limits 60 requests per minute, just wait for a minute then try again
+                    System.Threading.Thread.Sleep(60000);
+                    continue;
+                }
+
+                BsonDocument doc = BsonDocument.Parse(content);
+                collection.InsertOne(doc);
+
+                i++;
+            }
+        }
+
 
         // this only works if we can bulk load data for all heroes in one json
         public static void CreateCollection(IMongoDatabase database, string collectionName, string openDotaRestPath)
@@ -57,10 +84,10 @@ namespace LoadDotaData
         {
             database.CreateCollection(collectionName);
             var collection = database.GetCollection<BsonDocument>(collectionName);
-            for (int i = 0; i < NUMBER_OF_DOTA_HEROES; )
+            for (int i = 1; i <= NUMBER_OF_DOTA_HEROES; )
             {
                 var content = RestAPICall("https://api.opendota.com", prefix + i.ToString() + suffix, Method.GET);
-
+                
                 if (content.Contains("error"))
                 {
                     // opendota rate limits 50 requests per minute, just wait for a minute then try again
@@ -123,6 +150,11 @@ namespace LoadDotaData
             if (!CollectionExists(database, "durations"))
             {
                 CreateCollection(database, "durations", "/api/heroes/", "/durations");
+            }
+
+            if (!CollectionExists(database, "benchmarks"))
+            {
+                CreateBenchMarksCollection(database);
             }
 
             // this works but we don't really need this 

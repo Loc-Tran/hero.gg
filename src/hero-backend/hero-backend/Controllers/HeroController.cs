@@ -61,6 +61,12 @@ namespace hero_backend.Controllers
             return GetDocument("heroes", new BsonDocument("localized_name", heroName));
         }
 
+        [HttpGet("benchmarks/")]
+        public ActionResult<string> GetAllHeroBenchMarks()
+        {
+            return GetMultipleDocuments("benchmarks", new BsonDocument());
+        }
+
         [HttpGet("heroinfo/")]
         public ActionResult<string> GetAllHeroes()
         {
@@ -95,6 +101,13 @@ namespace hero_backend.Controllers
         public ActionResult<string> GetHeroDurations(int heroId)
         {
             return GetMultipleDocuments("durations", new BsonDocument("hero_id", heroId));
+        }
+
+
+        [HttpGet("benchmarks/{heroId}")]
+        public ActionResult<string> GetHeroBenchMarks(int heroId)
+        {
+            return GetDocument("benchmarks", new BsonDocument("hero_id", heroId));
         }
 
         // POST api/hero
