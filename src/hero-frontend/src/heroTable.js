@@ -2,53 +2,77 @@ import React, { Component } from 'react'
 let DOTA2_CDN = "http://cdn.dota2.com";  
 
 export class HeroTable extends Component {
-   calculateTotalGames() {
-     let retval = 0;
-     let minimumElo = this.state.minimumElo;
-     let i;
-     
-     for(i = 0; i < this.state.heroStats.length; i++) {
-       let j;
-       for(j = minimumElo; j <= 7; j++) {
-         retval += this.state.heroStats[i][j.toString() + "_pick"];
-       }
-     }
-     return retval;
-   }
-
      constructor(props) {
       super(props)
       
       this.state = {
-         heroes: [],
-         heroStats: [],
-         benchMarks: [],
-         tableKeys: ["Rank", "Hero", "Roles", "Win Rate", "Play Percent", "Kills/Min", "Dmg/Min", "Tower Dmg", "Gold/Min", "EXP/Min", "CS/Min", "Healing/Min"],
+         heroDataAggregations: [],
+         tableKeys: ["Rank", "Hero", "Win Rate", "Play Percent", "Kills/Min", "Dmg/Min", "Tower Dmg", "Gold/Min", "EXP/Min", "CS/Min", "Healing/Min"],
          minimumElo: 6 // 7 (Divine) is highest before Immortal (challenger of DotA), this should be set in App
       }
-      
-      fetch('http://localhost:5000/api/hero/heroinfo')
-      .then(res => res.json())
-      .then((data) => {
-        this.setState({ heroes: data })
-      })
-      .catch(console.log)
-      
-      fetch('http://localhost:5000/api/hero/herostats')
-      .then(res => res.json())
-      .then((data) => {
-        this.setState({ heroStats: data })
-      })
-      .catch(console.log)
-      
-      fetch('http://localhost:5000/api/hero/benchmarks')
-      .then(res => res.json())
-      .then((data) => {
-        this.setState({ benchMarks: data })
-      })
-      .catch(console.log)
-     
    }
+   
+   async logFetch(url) {
+    try {
+      const response = await fetch(url);
+      return await response.json();
+    }
+    catch (err) {
+      console.log('fetch failed', err);
+    }
+  }
+
+   calculateTotalGames(heroStats) {
+     let retval = 0;
+     let minimumElo = this.state.minimumElo;
+     let i;
+     
+     for(i = 0; i < heroStats.length; i++) {
+       let j;
+       for(j = minimumElo; j <= 7; j++) {
+         retval += heroStats[i][j.toString() + "_pick"];
+       }
+     }
+     return retval;
+   }
+   
+   async componentDidMount() {
+      let heroes = await this.logFetch('http://localhost:5000/api/hero/heroinfo');
+      let heroStats = await this.logFetch('http://localhost:5000/api/hero/herostats');
+      let benchMarks = await this.logFetch('http://localhost:5000/api/hero/benchmarks');
+      // parse api data here
+      const heroDataAggs = [];
+      let totalGames = this.calculateTotalGames(heroStats);
+      heroes.map((hero, index) => {
+         let object = {};
+         let herostats = heroStats[index];
+         let benchMark = benchMarks[index].result;
+
+         if (herostats) {
+           object.localized_name = hero.localized_name;
+           object.img = DOTA2_CDN + herostats.icon;
+           let pickTotal = this.calculatePickTotal(herostats);
+           let winTotal = this.calculateWinTotal(herostats);
+           object.winrate = ((winTotal*1.0 / pickTotal) * 100).toFixed(2);
+           object.playpercentage = ((pickTotal*1.0 / totalGames) * 100).toFixed(2);
+         }
+        
+         if (benchMark && benchMark.hero_damage_per_min[4].value != null) { // if one is null, all of them are, opendota doesn't support benchmarks for the most recent heroes
+           object.dmgPerMin = benchMark.hero_damage_per_min[4].value.toFixed(2);
+           object.towerDmg = benchMark.tower_damage[4].value;
+           object.killsPerMin = benchMark.kills_per_min[4].value.toFixed(2);
+           object.goldPerMin = benchMark.gold_per_min[4].value;
+           object.expPerMin = benchMark.xp_per_min[4].value;
+           object.csPerMin = benchMark.last_hits_per_min[4].value.toFixed(2);
+           object.healingPerMin = benchMark.hero_healing_per_min[4].value.toFixed(2);
+         }
+         
+         
+         heroDataAggs.push(object);
+       })
+       this.setState({ heroDataAggregations: heroDataAggs })
+  }
+
    
    calculatePickTotal(herostats) {
      let minimumElo = this.state.minimumElo;
@@ -73,67 +97,21 @@ export class HeroTable extends Component {
    }
   
   renderTableData() {
-      let totalGames = this.calculateTotalGames();
-      return this.state.heroes.map((hero, index) => {
-         const { hero_id, localized_name, roles } = hero //destructuring
-         let herostats;
-         
-         if (this.state.heroStats && this.state.heroStats.length > 0) {
-           herostats = this.state.heroStats[index];
-         }
-         
-         let benchMark;
-         if (this.state.benchMarks && this.state.benchMarks.length > 0) {
-           benchMark = this.state.benchMarks[index].result;
-           console.log(benchMark)
-         }
-         
-         let img = "";
-         let winrate;
-         let playpercentage;
-
-         if (herostats) {
-           img = DOTA2_CDN + herostats.icon;
-           let pickTotal = this.calculatePickTotal(herostats);
-           let winTotal = this.calculateWinTotal(herostats);
-           winrate = ((winTotal*1.0 / pickTotal) * 100).toFixed(2);
-           playpercentage = ((pickTotal*1.0 / totalGames) * 100).toFixed(2);
-         }
-         
-         
-         let dmgPerMin;
-         let towerDmg;
-         let goldPerMin;
-         let expPerMin;
-         let killsPerMin;
-         let csPerMin;
-         let healingPerMin;
-
-         if (benchMark) {
-           dmgPerMin = benchMark.hero_damage_per_min[4].value;
-           towerDmg = benchMark.tower_damage[4].value;
-           killsPerMin = benchMark.kills_per_min[4].value;
-           goldPerMin = benchMark.gold_per_min[4].value;
-           expPerMin = benchMark.xp_per_min[4].value;
-           csPerMin = benchMark.last_hits_per_min[4].value;
-           healingPerMin = benchMark.hero_healing_per_min[4].value;
-         }
-         
+      return this.state.heroDataAggregations.map((hero, index) => {
          // tableKeys: ["Rank", "Hero", "Roles", "Win Rate", "Play Percent", "Kills/Min", "Dmg/Min", "Tower Dmg", "Gold/Min", "EXP/Min", "CS/Min", "Healing/Min"]
          return (
             <tr key={index}>
                <td>{index + 1}</td>
-               <td><img alt={localized_name} src={img} />{localized_name}</td>
-               <td>{roles}</td>
-               <td>{winrate}%</td>
-               <td>{playpercentage}%</td>
-               <td>{killsPerMin}</td>
-               <td>{dmgPerMin}</td>
-               <td>{towerDmg}</td>
-               <td>{goldPerMin}</td>
-               <td>{expPerMin}</td>
-               <td>{csPerMin}</td>
-               <td>{healingPerMin}</td>
+               <td><img alt={hero.localized_name} src={hero.img} />{hero.localized_name}</td>
+               <td>{hero.winrate}%</td>
+               <td>{hero.playpercentage}%</td>
+               <td>{hero.killsPerMin}</td>
+               <td>{hero.dmgPerMin}</td>
+               <td>{hero.towerDmg}</td>
+               <td>{hero.goldPerMin}</td>
+               <td>{hero.expPerMin}</td>
+               <td>{hero.csPerMin}</td>
+               <td>{hero.healingPerMin}</td>
             </tr>
          )
       })
