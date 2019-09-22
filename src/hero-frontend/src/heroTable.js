@@ -7,9 +7,12 @@ export class HeroTable extends Component {
       
       this.state = {
          heroDataAggregations: [],
+         keys: [null, "img", "winrate", "playpercentage", "killsPerMin", "dmgPerMin", "towerDmg", "goldPerMin", "expPerMin", "csPerMin", "healingPerMin"],
          tableKeys: ["Rank", "Hero", "Win Rate", "Play Percent", "Kills/Min", "Dmg/Min", "Tower Dmg", "Gold/Min", "EXP/Min", "CS/Min", "Healing/Min"],
          minimumElo: 6 // 7 (Divine) is highest before Immortal (challenger of DotA), this should be set in App
       }
+      
+      this.onSort = this.onSort.bind(this);
    }
    
    async logFetch(url) {
@@ -36,6 +39,9 @@ export class HeroTable extends Component {
      return retval;
    }
    
+   componentDidUpdate() {
+   }
+   
    async componentDidMount() {
       let heroes = await this.logFetch('http://localhost:5000/api/hero/heroinfo');
       let heroStats = await this.logFetch('http://localhost:5000/api/hero/herostats');
@@ -58,15 +64,22 @@ export class HeroTable extends Component {
          }
         
          if (benchMark && benchMark.hero_damage_per_min[4].value != null) { // if one is null, all of them are, opendota doesn't support benchmarks for the most recent heroes
-           object.dmgPerMin = benchMark.hero_damage_per_min[4].value.toFixed(2);
+           object.dmgPerMin = parseFloat(benchMark.hero_damage_per_min[4].value.toFixed(2));
            object.towerDmg = benchMark.tower_damage[4].value;
-           object.killsPerMin = benchMark.kills_per_min[4].value.toFixed(2);
+           object.killsPerMin = parseFloat(benchMark.kills_per_min[4].value.toFixed(2));
            object.goldPerMin = benchMark.gold_per_min[4].value;
            object.expPerMin = benchMark.xp_per_min[4].value;
-           object.csPerMin = benchMark.last_hits_per_min[4].value.toFixed(2);
-           object.healingPerMin = benchMark.hero_healing_per_min[4].value.toFixed(2);
+           object.csPerMin = parseFloat(benchMark.last_hits_per_min[4].value.toFixed(2));
+           object.healingPerMin = benchMark.hero_healing_per_min[4].value;
+         } else {
+           object.dmgPerMin = "0.0";
+           object.towerDmg = "0.0";
+           object.killsPerMin = "0.0";
+           object.goldPerMin = "0.0";
+           object.expPerMin = "0.0";
+           object.csPerMin = "0.0";
+           object.healingPerMin = "0.0";
          }
-         
          
          heroDataAggs.push(object);
        })
@@ -117,9 +130,28 @@ export class HeroTable extends Component {
       })
    }
    
+   
+   onSort(sortKeyIndex) {
+    /*
+    assuming your data is something like
+    [
+      {accountname:'foo', negotiatedcontractvalue:'bar'},
+      {accountname:'monkey', negotiatedcontractvalue:'spank'},
+      {accountname:'chicken', negotiatedcontractvalue:'dance'},
+    ]
+    */
+    const sortKey = this.state.keys[sortKeyIndex];
+    if(sortKey === null || sortKey === "img"){
+      return
+    }
+    const heroDataAggs = this.state.heroDataAggregations;
+    heroDataAggs.sort((a,b) => a[sortKey] < b[sortKey])
+    this.setState({heroDataAggregations : heroDataAggs})
+  }
+   
    renderTableHeader() {
       return this.state.tableKeys.map((key, index) => {
-         return <th key={index}>{key.toUpperCase()}</th>
+         return <th key={key} onClick={() => this.onSort(index)}>{key.toUpperCase()}</th>
       })
    }
 
