@@ -3,13 +3,14 @@ let DOTA2_CDN = "http://cdn.dota2.com";
 
 export class HeroTable extends Component {
      constructor(props) {
-      super(props)
+      super(props);
       
+      this.keys = [null, "localized_name", "winrate", "playpercentage", "killsPerMin", "dmgPerMin", "towerDmg", "goldPerMin", "expPerMin", "csPerMin", "healingPerMin"];
+      this.tableKeys = ["Rank", "Hero", "Win Rate", "Play Percent", "Kills/Min", "Dmg/Min", "Tower Dmg", "Gold/Min", "EXP/Min", "CS/Min", "Healing/Min"];
       this.state = {
          heroDataAggregations: [],
-         keys: [null, "img", "winrate", "playpercentage", "killsPerMin", "dmgPerMin", "towerDmg", "goldPerMin", "expPerMin", "csPerMin", "healingPerMin"],
-         tableKeys: ["Rank", "Hero", "Win Rate", "Play Percent", "Kills/Min", "Dmg/Min", "Tower Dmg", "Gold/Min", "EXP/Min", "CS/Min", "Healing/Min"],
-         minimumElo: 6 // 7 (Divine) is highest before Immortal (challenger of DotA), this should be set in App
+         minimumElo: 6, // 7 (Divine) is highest before Immortal (challenger of DotA), this should be set in App
+         lastColumnClicked: ""
       }
       
       this.onSort = this.onSort.bind(this);
@@ -54,16 +55,14 @@ export class HeroTable extends Component {
          let herostats = heroStats[index];
          let benchMark = benchMarks[index].result;
 
-         if (herostats) {
-           object.localized_name = hero.localized_name;
-           object.img = DOTA2_CDN + herostats.icon;
-           let pickTotal = this.calculatePickTotal(herostats);
-           let winTotal = this.calculateWinTotal(herostats);
-           object.winrate = ((winTotal*1.0 / pickTotal) * 100).toFixed(2);
-           object.playpercentage = ((pickTotal*1.0 / totalGames) * 100).toFixed(2);
-         }
+         object.localized_name = hero.localized_name;
+         object.img = DOTA2_CDN + herostats.icon;
+         let pickTotal = this.calculatePickTotal(herostats);
+         let winTotal = this.calculateWinTotal(herostats);
+         object.winrate = ((winTotal*1.0 / pickTotal) * 100).toFixed(2);
+         object.playpercentage = ((pickTotal*1.0 / totalGames) * 100).toFixed(2);
         
-         if (benchMark && benchMark.hero_damage_per_min[4].value != null) { // if one is null, all of them are, opendota doesn't support benchmarks for the most recent heroes
+         if (benchMark.hero_damage_per_min[4].value != null) { // if one is null, all of them are, opendota doesn't support benchmarks for the most recent heroes
            object.dmgPerMin = parseFloat(benchMark.hero_damage_per_min[4].value.toFixed(2));
            object.towerDmg = benchMark.tower_damage[4].value;
            object.killsPerMin = parseFloat(benchMark.kills_per_min[4].value.toFixed(2));
@@ -83,6 +82,7 @@ export class HeroTable extends Component {
          
          heroDataAggs.push(object);
        })
+       
        this.setState({ heroDataAggregations: heroDataAggs })
   }
 
@@ -132,25 +132,24 @@ export class HeroTable extends Component {
    
    
    onSort(sortKeyIndex) {
-    /*
-    assuming your data is something like
-    [
-      {accountname:'foo', negotiatedcontractvalue:'bar'},
-      {accountname:'monkey', negotiatedcontractvalue:'spank'},
-      {accountname:'chicken', negotiatedcontractvalue:'dance'},
-    ]
-    */
-    const sortKey = this.state.keys[sortKeyIndex];
-    if(sortKey === null || sortKey === "img"){
+    const sortKey = this.keys[sortKeyIndex];
+    if(sortKey === null){
       return
     }
     const heroDataAggs = this.state.heroDataAggregations;
-    heroDataAggs.sort((a,b) => a[sortKey] < b[sortKey])
+    if (this.state.lastColumnClicked === sortKey) {
+      heroDataAggs.sort((a,b) => a[sortKey] > b[sortKey]);
+      this.state.lastColumnClicked = ""; // want to sort as if we didn't click on the column at all if we clicked on it the third time
+    } else {
+      heroDataAggs.sort((a,b) => a[sortKey] < b[sortKey]);
+      this.state.lastColumnClicked = sortKey;
+    }
+      
     this.setState({heroDataAggregations : heroDataAggs})
   }
    
    renderTableHeader() {
-      return this.state.tableKeys.map((key, index) => {
+      return this.tableKeys.map((key, index) => {
          return <th key={key} onClick={() => this.onSort(index)}>{key.toUpperCase()}</th>
       })
    }
