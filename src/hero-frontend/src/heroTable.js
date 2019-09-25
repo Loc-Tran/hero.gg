@@ -10,10 +10,16 @@ export class HeroTable extends Component {
       this.state = {
          heroDataAggregations: [],
          minimumElo: 6, // 7 (Divine) is highest before Immortal (challenger of DotA), this should be set in App
-         lastColumnClicked: ""
+         lastColumnClicked: "",
+         filterValue: ""
       }
       
       this.onSort = this.onSort.bind(this);
+      this.onChange = this.onChange.bind(this);
+   }
+   
+   onChange(event) {
+    this.setState({filterValue: event.target.value})
    }
    
    async logFetch(url) {
@@ -69,7 +75,7 @@ export class HeroTable extends Component {
            object.goldPerMin = benchMark.gold_per_min[4].value;
            object.expPerMin = benchMark.xp_per_min[4].value;
            object.csPerMin = parseFloat(benchMark.last_hits_per_min[4].value.toFixed(2));
-           object.healingPerMin = benchMark.hero_healing_per_min[4].value;
+           object.healingPerMin = parseFloat(benchMark.hero_healing_per_min[4].value.toFixed(2));
          } else {
            object.dmgPerMin = "0.0";
            object.towerDmg = "0.0";
@@ -112,21 +118,23 @@ export class HeroTable extends Component {
   renderTableData() {
       return this.state.heroDataAggregations.map((hero, index) => {
          // tableKeys: ["Rank", "Hero", "Roles", "Win Rate", "Play Percent", "Kills/Min", "Dmg/Min", "Tower Dmg", "Gold/Min", "EXP/Min", "CS/Min", "Healing/Min"]
-         return (
-            <tr key={index}>
-               <td>{index + 1}</td>
-               <td><img alt={hero.localized_name} src={hero.img} />{hero.localized_name}</td>
-               <td>{hero.winrate}%</td>
-               <td>{hero.playpercentage}%</td>
-               <td>{hero.killsPerMin}</td>
-               <td>{hero.dmgPerMin}</td>
-               <td>{hero.towerDmg}</td>
-               <td>{hero.goldPerMin}</td>
-               <td>{hero.expPerMin}</td>
-               <td>{hero.csPerMin}</td>
-               <td>{hero.healingPerMin}</td>
-            </tr>
-         )
+         if (hero.localized_name.toLowerCase().includes(this.state.filterValue.toLowerCase())) {
+           return (
+              <tr key={index}>
+                 <td>{index + 1}</td>
+                 <td><img alt={hero.localized_name} src={hero.img} />{hero.localized_name}</td>
+                 <td>{hero.winrate}%</td>
+                 <td>{hero.playpercentage}%</td>
+                 <td>{hero.killsPerMin}</td>
+                 <td>{hero.dmgPerMin}</td>
+                 <td>{hero.towerDmg}</td>
+                 <td>{hero.goldPerMin}</td>
+                 <td>{hero.expPerMin}</td>
+                 <td>{hero.csPerMin}</td>
+                 <td>{hero.healingPerMin}</td>
+              </tr>
+           )
+         }
       })
    }
    
@@ -157,8 +165,8 @@ export class HeroTable extends Component {
    render() {
       return (
          <div>
-            <h1 id='title'>hero.gg</h1>
-            <table id='heroes'>
+            <input type="text" placeholder='Filter by Hero Name' value={this.state.filterValue} onChange={this.onChange} />
+            <table class="heavyTable">
                <tbody>
                   <tr>{this.renderTableHeader()}</tr>
                   {this.renderTableData()}
