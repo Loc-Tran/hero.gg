@@ -19,3 +19,4 @@ To run the application (tested only on Ubuntu),
 ## Heroes filtered using the word shadow, maintaining a stable sort by win rate in ascending order
 ![Heroes filtered using the word shadow, maintaining a stable sort by win rate in ascending order](https://raw.githubusercontent.com/Loc-Tran/hero.gg/master/examples/filter%20by%20name.png)
 
+Users can sort by ascending and descending by clicking the columns in the table. They can also filter by the hero's name to quickly search for the hero that they are looking for.
